@@ -1,3 +1,6 @@
 [submodule "winapi-header-wrappers"]
 	path = winapi-header-wrappers
 	url = https://github.com/alf-p-steinbach/winapi-header-wrappers
+[submodule "cppx-core"]
+	path = cppx-core
+	url = https://github.com/alf-p-steinbach/cppx-core
