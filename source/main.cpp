@@ -46,7 +46,7 @@ namespace app {
         cout, clog, endl, invoke, runtime_error, string, vector
         );
     $use_cppx(
-        hopefully, fail_, Is_zero,
+        noreturn, hopefully, fail_, Is_zero,
         Byte, fs_util::C_file, Size, Index, C_str,
         fs_util::read, fs_util::read_, fs_util::read_sequence, fs_util::read_sequence_,
         fs_util::peek_,
@@ -146,6 +146,7 @@ namespace app {
                 }
             }
             fail_<Uix>( "Ungood file: no section (fully) contains the export table." );
+            noreturn();
         } );
 
         hopefully( section.SizeOfRawData > 0 )
@@ -216,6 +217,9 @@ namespace app {
         hopefully( dos_header.e_magic == IMAGE_DOS_SIGNATURE )  //0x5A4D, 'MZ' multichar.
             or fail_<Uix>( ""s << "No MZ magic number at start of '" << u8_path << "'." );
             
+        #pragma warning( disable: 4702 )
+        (void)( dos_header.e_lfanew or $fail( "Blah" ) );
+
         fseek( f, dos_header.e_lfanew, SEEK_SET ) >> Is_zero()
             or fail_<Uix>( "fseek to PE header failed" );
             
