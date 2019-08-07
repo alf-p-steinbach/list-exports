@@ -50,7 +50,7 @@ namespace app {
         Byte, fs_util::C_file, Size, Index, C_str,
         fs_util::read, fs_util::read_, fs_util::read_sequence, fs_util::read_sequence_,
         fs_util::peek_,
-        is_in, P_, to_hex, up_to
+        bits_per_, is_in, P_, to_hex, up_to
         );
     namespace fs = std::filesystem;
     using namespace cppx::basic_string_building;        // operator<<, operator""s
@@ -76,31 +76,6 @@ namespace app {
         static constexpr int address_width = 64;
     };
 
-    template< class Type >
-    auto from_bytes_( const P_<const Byte> p_first )
-        -> Type
-    {
-        Type result;
-        memcpy( &result, p_first, sizeof( Type ) );
-        return result;
-    }
-
-    template< class Type >
-    auto sequence_from_bytes_( const P_<const Byte> p_first, const Size n )
-        -> vector<Type>
-    {
-        vector<Type> result;
-        if( n <= 0 ) {
-            return result;
-        }
-
-        result.reserve( n );
-        for( const Index i: up_to( n ) ) {
-            result.push_back( from_bytes_<Type>( p_first + i*sizeof( Type ) ) );
-        }
-        return result;
-    }
-
     // When this function is called the file position is at start of the optional header.
     template< class Pe_types >
     void list_exports(
@@ -109,11 +84,9 @@ namespace app {
         const IMAGE_FILE_HEADER&    pe_header
         )
     {
-        cout << Pe_types::address_width << "-bit DLL." << endl;
-
         using Optional_header = typename Pe_types::Optional_header;
         const auto pe_header_opt = read_<Optional_header>( f );
-        
+
         hopefully( IMAGE_DIRECTORY_ENTRY_EXPORT < pe_header_opt.NumberOfRvaAndSizes )
             or fail_<Uix>( ""s << "No exports found in '" << u8_path << "'." );
             
@@ -160,6 +133,15 @@ namespace app {
         const auto  dir             = read_<IMAGE_EXPORT_DIRECTORY>( f );
         const INT32 ordinal_base    = dir.Base;
 
+        fseek( f, dir.Name + addr_to_pos, SEEK_SET ) >> Is_zero()
+            or fail_<Uix>( "Ungood file: a seek to the module name failed." );
+        const string module_name = read_c_string( f );
+            
+        cout    << Pe_types::address_width << "-bit DLL"
+                << " (as viewed from " << bits_per_<void*> << "-bit code)"
+                << ", module name \"" << module_name << "\""
+                << "." << endl;
+
         if( dir.NumberOfFunctions == 0 ) {
             cout << "No functions are exported";
         } else if( dir.NumberOfFunctions == 1 ) {
@@ -179,17 +161,12 @@ namespace app {
             or fail_<Uix>( "Ungood file: a seek to the name addresses table failed." );
         const vector<DWORD> name_positions = read_sequence_<DWORD>( f, dir.NumberOfNames );
 
-        vector<string> names;
-        names.reserve( name_positions.size() );
+        vector<string> export_names;
+        export_names.reserve( name_positions.size() );
         for( const DWORD name_addr: name_positions ) {
-            string name;
-            int ch;
             fseek( f, name_addr + addr_to_pos, SEEK_SET ) >> Is_zero()
                 or fail_<Uix>( "Ungood file: a seek to the an export name failed." );
-            while( (ch = fgetc( f )) != EOF and ch != 0 ) {
-                name += char( ch );
-            }
-            names.push_back( name );
+            export_names.push_back( read_c_string( f ) );
         }
         
         fseek( f, dir.AddressOfNameOrdinals + addr_to_pos, SEEK_SET ) >> Is_zero()
@@ -198,7 +175,22 @@ namespace app {
 
         cout << string( 72, '-' ) << endl;
         for( const int i: up_to( dir.NumberOfNames ) ) {
-            cout << names[i] << " @" << ordinals[i] + ordinal_base << endl;
+            cout << export_names[i] << " @" << ordinals[i] + ordinal_base << endl;
+        }
+    }
+
+    template< class Pe_types >
+    void display_info(
+        const string&               u8_path,
+        const C_file&               f,
+        const IMAGE_FILE_HEADER&    pe_header
+        )
+    {
+        try {
+            list_exports<Pe_types>( u8_path, f, pe_header );
+        } catch( ... ) {
+            cout << Pe_types::address_width << "-bit DLL." << endl;
+            throw;
         }
     }
 
@@ -229,14 +221,14 @@ namespace app {
 
         const auto pe_header        = read_<IMAGE_FILE_HEADER>( f );
         const auto image_kind_spec  = peek_<WORD>( f );
-        
+
         switch( image_kind_spec ) {
             case IMAGE_NT_OPTIONAL_HDR32_MAGIC: {               // 0x10B
-                list_exports<Pe32_types>( u8_path, f, pe_header );
+                display_info<Pe32_types>( u8_path, f, pe_header );
                 break;
             }
             case IMAGE_NT_OPTIONAL_HDR64_MAGIC: {               // 0x20B
-                list_exports<Pe64_types>( u8_path, f, pe_header );
+                display_info<Pe64_types>( u8_path, f, pe_header );
                 break;
             }
             default: {      // E.g. 0x107 a.k.a. IMAGE_ROM_OPTIONAL_HDR_MAGIC
