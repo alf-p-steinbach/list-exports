@@ -4,12 +4,15 @@
 
 namespace win_util {
     $use_std( exchange );
-    $use_cppx( Wide_c_str, hopefully, P_ );
-    
+    $use_cppx( hopefully );
+ 
+    using Mutable_wide_c_str    = wchar_t*;
+    using Wide_c_str            = const wchar_t*;
+
     class Command_line_args
     {
-        P_<P_<wchar_t>>     m_parts;
-        int                 m_n_parts;
+        Mutable_wide_c_str*     m_parts;
+        int                     m_n_parts;
         
         Command_line_args( const Command_line_args& ) = delete;
         auto operator=( const Command_line_args& ) -> Command_line_args& = delete;
@@ -50,7 +53,7 @@ namespace app {
         Byte, fs_util::C_file, Size, Index, C_str,
         fs_util::read, fs_util::read_, fs_util::read_sequence, fs_util::read_sequence_,
         fs_util::peek_,
-        bits_per_, is_in, P_, to_hex, up_to
+        bits_per_, is_in, to_hex, up_to
         );
     namespace fs = std::filesystem;
     using namespace cppx::basic_string_building;        // operator<<, operator""s
