@@ -41,7 +41,6 @@ namespace win_util {
             }
         }
     };
-    
 }  // namespace win_util
 
 namespace app {
