@@ -212,9 +212,6 @@ namespace app {
         hopefully( dos_header.e_magic == IMAGE_DOS_SIGNATURE )  //0x5A4D, 'MZ' multichar.
             or fail_<Uix>( ""s << "No MZ magic number at start of '" << u8_path << "'." );
             
-        #pragma warning( disable: 4702 )
-        (void)( dos_header.e_lfanew or $fail( "Blah" ) );
-
         fseek( f, dos_header.e_lfanew, SEEK_SET ) >> Is_zero()
             or fail_<Uix>( "fseek to PE header failed" );
             
