@@ -107,7 +107,7 @@ namespace app {
         hopefully( dir_info.Size >= sizeof( IMAGE_EXPORT_DIRECTORY ) )
             or fail_<Uix>( "Ungood file: claimed size of export dir header is too small." );
             
-        const IMAGE_SECTION_HEADER& section = invoke( [&]()
+        auto& section = invoke( [&]() -> const IMAGE_SECTION_HEADER&
         {
             const auto dir_addr         = dir_info.VirtualAddress;
             const auto beyond_dir_addr  = dir_addr + dir_info.Size;
@@ -139,7 +139,7 @@ namespace app {
             or fail_<Uix>( "Ungood file: a seek to the module name failed." );
         const string module_name = read_c_string( f );
             
-        cout    << Pe_types::address_width << "-bit DLL"
+        cout    << Pe_types::address_width << "-bit module"
                 << " (as viewed from " << bits_per_<void*> << "-bit code)"
                 << ", module name \"" << module_name << "\""
                 << "." << endl;
@@ -191,7 +191,7 @@ namespace app {
         try {
             list_exports<Pe_types>( u8_path, f, pe_header );
         } catch( ... ) {
-            cout << Pe_types::address_width << "-bit DLL." << endl;
+            cout << Pe_types::address_width << "-bit module." << endl;
             throw;
         }
     }
