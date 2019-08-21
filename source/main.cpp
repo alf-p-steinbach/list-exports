@@ -92,8 +92,7 @@ namespace app {
         hopefully( IMAGE_DIRECTORY_ENTRY_EXPORT < pe_header_opt.NumberOfRvaAndSizes )
             or fail_<Uix>( ""s << "No exports found in '" << u8_path << "'." );
             
-        const auto section_headers = invoke( [&]()
-            -> vector<IMAGE_SECTION_HEADER>
+        const auto section_headers = invoke( [&]() -> vector<IMAGE_SECTION_HEADER>
         {
             vector<IMAGE_SECTION_HEADER> headers;
             for( int _: up_to( pe_header.NumberOfSections ) ) {
